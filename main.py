@@ -333,7 +333,7 @@ def main():
 
         print('\n[!] Среднемесячные значения')
 
-        with pd.ExcelWriter('Tinkoff_Index_среднемесячные значения.xlsx') as writer:
+        with pd.ExcelWriter('Tinkoff_Index_monthly_averages.xlsx') as writer:
             df_business.to_excel(writer, sheet_name='Tinkoff_Index_Business', index=False)
             df_customers.to_excel(writer, sheet_name='Tinkoff_Index_Customers', index=False)
 
