@@ -12,7 +12,7 @@ checkpoint = f'{date.today().month}.{date.today().year}'
 
 url_glob = 'https://index.tinkoff.ru/corona-index/papi'
 
-path_to_archive = r'.\archive'
+path_to_archive = './archive'
 
 regs = ['Алтайский край',
         'Амурская область',
