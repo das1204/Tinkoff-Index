@@ -1,7 +1,7 @@
 import numpy as np
 import requests
 import pandas as pd
-from datetime import date
+from datetime import date, datetime
 from colorama import Fore, Style
 import warnings
 import os
@@ -9,7 +9,9 @@ from tqdm.auto import tqdm
 
 warnings.filterwarnings('ignore')
 
-checkpoint = f'{date.today().month}.{date.today().year}'
+begin_date = datetime(2024, 1, 1)
+
+finish_date = date.today()
 
 url_glob = 'https://index.tinkoff.ru/corona-index/papi'
 
@@ -218,8 +220,9 @@ def pars_consumer(region_name, request_total, request_charts, dict_types):
     for key, value in dict_types.items():
         values = []
         for activity_20 in range(len(request_charts.get('consumer').get(str(key)))):
-            if len(values) < len(df['Дата']):
-                values = values + [np.NAN] * (len(df['Дата']) - len(values))
+            values.append(request_charts.get('consumer').get(str(key))[activity_20].get('activity_20'))
+        if len(values) < len(df['Дата']):
+            values = values + [np.NAN] * (len(df['Дата']) - len(values))
         df[f'{value}, %'] = values
         df = df.sort_values(by=['Дата'])
     return df
@@ -264,7 +267,7 @@ def old_file_killer(file_name):
             print(f'\n[-] {e}')
 
 
-def URL_form(region, iteration, start_date, end_date):
+def URL_form(region, start_date, end_date):
     if str(region) == 'Россия':
         url_total = f'{url_glob}/period_region_total?regionName=all&start={start_date}&end={end_date}'
         url_charts = f'{url_glob}/period_categories_charts?regionName=all&start={start_date}&end={end_date}'
@@ -278,15 +281,17 @@ def URL_form(region, iteration, start_date, end_date):
 def main():
     print(f'[!] Парсинг {Fore.YELLOW + "Тинькофф Индекса" + Style.RESET_ALL} от СОД ЭУ ГУ ЦБ РФ по ЦФО:')
     try:
-        file_name_c = f'Tinkoff_Index_Customers_2024_{date.today().year}.xlsx'
+        print('[!] Траты потребителей:')
+
+        file_name_c = f'Tinkoff_Index_Customers_{begin_date.year}_{finish_date.year}.xlsx'
 
         combined_df_customers = pd.DataFrame()
 
-        pbar_customers = tqdm(zip(regs, range(len(regs))))
+        pbar_customers = tqdm(regs)
 
-        for region, i in pbar_customers:
+        for region in pbar_customers:
             pbar_customers.set_description(f'[+] {region}')
-            URLs = URL_form(region=region, iteration=i, start_date='01.2024', end_date=checkpoint)
+            URLs = URL_form(region=region, start_date=f'{begin_date.month}.{begin_date.year}', end_date=f'{finish_date.month}.{finish_date.year}')
             df_consumer = pars_consumer(region_name=region,
                                         request_total=requests.get(url=URLs[0]).json(),
                                         request_charts=requests.get(url=URLs[1]).json(),
@@ -306,15 +311,15 @@ def main():
 
         print('[!] Обороты бизнеса:')
 
-        file_name_b = f'Tinkoff_Index_Business_2024_{date.today().year}.xlsx'
+        file_name_b = f'Tinkoff_Index_Business_{begin_date.year}_{finish_date.year}.xlsx'
 
         combined_df_business = pd.DataFrame()
 
-        pbar_business = tqdm(zip(regs, range(len(regs))))
+        pbar_business = tqdm(regs)
 
-        for region, i in pbar_business:
+        for region in pbar_business:
             pbar_business.set_description(f'[+] {region}')
-            URLs = URL_form(region=region, iteration=i, start_date='01.2024', end_date=checkpoint)
+            URLs = URL_form(region=region, start_date=f'{begin_date.month}.{begin_date.year}', end_date=f'{finish_date.month}.{finish_date.year}')
 
             df_business = pars_business(region_name=region,
                                         request_total=requests.get(url=URLs[0]).json(),
@@ -333,7 +338,7 @@ def main():
         df_business = df_business.groupby(['Регион', df_business['Дата'].dt.to_period('M')]).mean(numeric_only=True).reset_index()
         df_business['Дата'] = df_business['Дата'].dt.to_timestamp().dt.strftime('%d.%m.%Y')
 
-        print('\n[!] Среднемесячные значения')
+        print('[!] Среднемесячные значения')
 
         with pd.ExcelWriter('Tinkoff_Index_monthly_averages.xlsx') as writer:
             df_business.to_excel(writer, sheet_name='Tinkoff_Index_Business', index=False)
