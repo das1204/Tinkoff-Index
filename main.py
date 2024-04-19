@@ -5,6 +5,7 @@ from datetime import date
 from colorama import Fore, Style
 import warnings
 import os
+from tqdm.auto import tqdm
 
 warnings.filterwarnings('ignore')
 
@@ -196,7 +197,7 @@ consumer_types = {
 }
 
 
-def pars_consumer(region_name, request_total, request_charts, dict_types, curve_date):
+def pars_consumer(region_name, request_total, request_charts, dict_types):
     dates = []
     index = []
     var_of_shopping = []
@@ -217,11 +218,8 @@ def pars_consumer(region_name, request_total, request_charts, dict_types, curve_
     for key, value in dict_types.items():
         values = []
         for activity_20 in range(len(request_charts.get('consumer').get(str(key)))):
-            if request_charts.get('consumer').get(str(key))[activity_20].get('date')[:10] in curve_date:
-                values.append(request_charts.get('consumer').get(str(key))[activity_20 - 1].get('activity_20'))
-            values.append(request_charts.get('consumer').get(str(key))[activity_20].get('activity_20'))
-        if len(values) < len(df['Дата']):
-            values = values + [np.NAN] * (len(df['Дата']) - len(values))
+            if len(values) < len(df['Дата']):
+                values = values + [np.NAN] * (len(df['Дата']) - len(values))
         df[f'{value}, %'] = values
         df = df.sort_values(by=['Дата'])
     return df
@@ -267,7 +265,6 @@ def old_file_killer(file_name):
 
 
 def URL_form(region, iteration, start_date, end_date):
-    print(f'\t[+] {region} - ' + f'{Fore.GREEN + f"{iteration + 1}/{len(regs)}" + Style.RESET_ALL}')
     if str(region) == 'Россия':
         url_total = f'{url_glob}/period_region_total?regionName=all&start={start_date}&end={end_date}'
         url_charts = f'{url_glob}/period_categories_charts?regionName=all&start={start_date}&end={end_date}'
@@ -285,13 +282,15 @@ def main():
 
         combined_df_customers = pd.DataFrame()
 
-        for region, i in zip(regs, range(len(regs))):
+        pbar_customers = tqdm(zip(regs, range(len(regs))))
+
+        for region, i in pbar_customers:
+            pbar_customers.set_description(f'[+] {region}')
             URLs = URL_form(region=region, iteration=i, start_date='01.2024', end_date=checkpoint)
             df_consumer = pars_consumer(region_name=region,
                                         request_total=requests.get(url=URLs[0]).json(),
                                         request_charts=requests.get(url=URLs[1]).json(),
-                                        dict_types=consumer_types,
-                                        curve_date=['2022-03-02', '2023-03-02', '2024-03-02'])
+                                        dict_types=consumer_types)
             combined_df_customers = pd.concat(([combined_df_customers, df_consumer]))
 
         old_file_killer(file_name=file_name_c)
@@ -311,7 +310,10 @@ def main():
 
         combined_df_business = pd.DataFrame()
 
-        for region, i in zip(regs, range(len(regs))):
+        pbar_business = tqdm(zip(regs, range(len(regs))))
+
+        for region, i in pbar_business:
+            pbar_business.set_description(f'[+] {region}')
             URLs = URL_form(region=region, iteration=i, start_date='01.2024', end_date=checkpoint)
 
             df_business = pars_business(region_name=region,
