@@ -159,6 +159,6 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 desktop.ini 
-Tinkoff_Index_Customers_2024_2024.xlsx
-Tinkoff_Index_Business_2024_2024.xlsx
+Tinkoff_Index_Customers_*.xlsx
+Tinkoff_Index_Business_*.xlsx
 Tinkoff_Index_monthly_averages.xlsx
